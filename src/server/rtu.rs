@@ -79,6 +79,8 @@ where
     S: Service<Request = Request, Response = Response> + Send + Sync + 'static,
     S::Error: Into<Error>,
 {
+    // NOTE this server is running on a single task as the RTU Bus is effectively one long lasting 
+    //  connection on which we don't really have to handle parallel requests.
     loop {
         let request = match framed.next().await {
             // Stream is exhausted
