@@ -50,6 +50,22 @@ impl Slave {
     pub fn is_reserved(self) -> bool {
         self > Self::max_device()
     }
+
+    /// Check wether a device with this slave id has to process request containing the id other.
+    /// 
+    /// A slave address of 0 in this [Slave] means to process every request. If other is the 
+    /// broadcast address (0) the request has to be processed.
+    pub fn must_process(self, other: Slave) -> bool {
+        self.0 == other.0 || other.is_broadcast() || self.is_broadcast() 
+    }
+
+    /// Check wether a device with this slave id has to process request containing the id other.
+    /// 
+    /// A slave address of 0 in this [Slave] means to respond to every (non broadcast) request.
+    /// Responding to a broadcast message is always wrong on any bus
+    pub fn must_respond(self, other: Slave) -> bool {
+        (self.0 == other.0 || self.is_broadcast()) && !other.is_broadcast()
+    }
 }
 
 impl From<SlaveId> for Slave {
