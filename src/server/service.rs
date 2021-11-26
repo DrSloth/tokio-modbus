@@ -1,16 +1,17 @@
-use crate::slave::Slave;
 use std::{future::Future, io, rc::Rc, sync::Arc};
+
+use crate::{slave::Slave, frame};
 
 /// A Modbus server service.
 pub trait Service {
-    /// Requests handled by the service.
-    type Request;
+    /// Requests handled by the service
+    type Request: From<frame::Request>;
 
-    /// Responses given by the service.
-    type Response;
+    /// Responses given by the service
+    type Response: Into<frame::Response>;
 
-    /// Errors produced by the service.
-    type Error;
+    /// Errors produced by the service
+    type Error: Into<io::Error>;
 
     /// The future response value.
     type Future: Future<Output = Result<Self::Response, Self::Error>> + Send + Sync + Unpin;
@@ -22,13 +23,13 @@ pub trait Service {
 /// Creates new `Service` values.
 pub trait NewService {
     /// Requests handled by the service
-    type Request;
+    type Request: From<frame::Request>;
 
     /// Responses given by the service
-    type Response;
+    type Response: Into<frame::Response>;
 
     /// Errors produced by the service
-    type Error;
+    type Error: Into<io::Error>;
 
     /// The `Service` value created by this factory
     type Instance: Service<Request = Self::Request, Response = Self::Response, Error = Self::Error>;
