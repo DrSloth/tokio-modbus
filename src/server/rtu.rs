@@ -2,16 +2,14 @@
  * Modbus RTU server functionality
  */
 
-use crate::{
-    codec,
-    frame::*,
-    server::service::{NewService, Service},
-};
-use futures::{select, Future, FutureExt};
-use futures_util::{SinkExt, StreamExt};
 use std::{io::Error, path::Path};
+use futures::{select, Future, FutureExt};
+
+use futures_util::{SinkExt, StreamExt};
 use tokio_serial::SerialStream;
 use tokio_util::codec::Framed;
+
+use crate::{codec, frame::*, prelude::Slave, server::service::{NewService, Service}};
 
 pub struct Server {
     serial: SerialStream,
@@ -46,9 +44,6 @@ impl Server {
     where
         S: NewService<Request = Request, Response = Response> + Send + Sync + 'static,
         Sd: Future<Output = ()> + Sync + Send + Unpin + 'static,
-        S::Request: From<Request>,
-        S::Response: Into<Response>,
-        S::Error: Into<Error>,
         S::Instance: Send + Sync + 'static,
     {
         let framed = Framed::new(self.serial, codec::rtu::ServerCodec::default());
@@ -71,13 +66,10 @@ impl Server {
 }
 
 /// frame wrapper around the underlying service's responses to forwarded requests
-async fn process<S>(
+async fn process<S: Service>(
     mut framed: Framed<SerialStream, codec::rtu::ServerCodec>,
     service: S,
 ) -> Result<(), Error>
-where
-    S: Service<Request = Request, Response = Response> + Send + Sync + 'static,
-    S::Error: Into<Error>,
 {
     // NOTE this server is running on a single task as the RTU Bus is effectively one long lasting 
     //  connection on which we don't really have to handle parallel requests.
@@ -90,15 +82,19 @@ where
 
         let hdr = request.hdr;
         let response = service
-            .call(request.hdr.slave_id.into(), request.pdu.0)
+            .call(Slave(request.hdr.slave_id), request.pdu.0.into())
             .await
             .map_err(Into::into)?;
-        framed
+
+        match response.into() {
+            Response::Nop => continue,
+            response => framed
             .send(rtu::ResponseAdu {
                 hdr,
                 pdu: response.into(),
             })
-            .await?;
+            .await?,
+        }
     }
     Ok(())
 }

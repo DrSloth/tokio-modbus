@@ -150,6 +150,8 @@ pub enum Response {
     /// The first parameter contains the returned Modbus function code
     /// The second parameter contains the bytes read following the function code
     Custom(FunctionCode, Vec<u8>),
+    /// Do not respond
+    Nop,
 }
 
 /// A server (slave) exception.

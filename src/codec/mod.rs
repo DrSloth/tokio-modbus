@@ -83,6 +83,10 @@ impl From<RequestPdu> for Bytes {
 
 impl From<Response> for Bytes {
     fn from(rsp: Response) -> Bytes {
+        if let Response::Nop = rsp {
+            return Default::default();
+        }
+
         let cnt = response_byte_count(&rsp);
         let mut data = BytesMut::with_capacity(cnt);
         use crate::frame::Response::*;
@@ -120,6 +124,7 @@ impl From<Response> for Bytes {
                     data.put_u8(d);
                 }
             }
+            Nop => unreachable!()
         }
         data.freeze()
     }
@@ -414,6 +419,7 @@ fn rsp_to_fn_code(rsp: &Response) -> u8 {
         WriteMultipleRegisters(_, _) => 0x10,
         ReadWriteMultipleRegisters(_) => 0x17,
         Custom(code, _) => code,
+        Nop => unreachable!(),
     }
 }
 
@@ -446,6 +452,7 @@ fn response_byte_count(rsp: &Response) -> usize {
         | ReadHoldingRegisters(ref data)
         | ReadWriteMultipleRegisters(ref data) => 2 + data.len() * 2,
         Custom(_, ref data) => 1 + data.len(),
+        Nop => 0,
     }
 }
 
