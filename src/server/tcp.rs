@@ -87,6 +87,7 @@ where
         let listener = listener(addr, workers).unwrap();
 
         loop {
+            log::debug!("Listening for requests");
             let (stream, addr) = listener.accept().await?;
             log::debug!("Accepted incoming request from {:?}", addr);
 
