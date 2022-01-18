@@ -94,7 +94,7 @@ where
             log::debug!("Framed stream for processing {:?}", addr);
 
             let new_service = new_service.clone();
-            tokio::spawn(Box::pin(async move {
+            //tokio::spawn(Box::pin(async move {
                 log::debug!("Spawning processing of request from {:?}", addr);
                 let service = new_service.new_service().unwrap();
                 let future = process(addr, framed, service);
@@ -102,7 +102,7 @@ where
                 if let Err(err) = future.await {
                     eprintln!("{:?}", err);
                 }
-            }));
+            //}));
         }
 
         // the only way found to specify the "task" future error type
@@ -114,7 +114,11 @@ where
     let mut shutdown_signal = shutdown_signal.fuse();
 
     select! {
-        res = server => if let Err(e) = res { error!("error: {}", e) },
+        res = server => {
+            if let Err(e) = res { 
+                log::error!("error: {}", e)
+            }
+        } ,
        _ = shutdown_signal => trace!("Shutdown signal received")
     }
 }
