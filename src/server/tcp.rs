@@ -101,7 +101,7 @@ where
                 let future = process(addr, framed, service);
 
                 if let Err(err) = future.await {
-                    eprintln!("{:?}", err);
+                    log::error!("{:?}", err);
                 }
             //}));
         }
@@ -178,6 +178,7 @@ fn listener(addr: SocketAddr, workers: usize) -> io::Result<TcpListener> {
     listener.reuse_address()?;
     listener.bind(&addr.into())?;
     listener.listen(1024)?;
+    listener.set_nonblocking(true)?;
     TcpListener::from_std(listener.into())
 }
 
