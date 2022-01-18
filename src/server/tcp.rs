@@ -38,7 +38,7 @@ impl Server {
     }
 
     /// Start a Modbus TCP server that blocks the current thread.
-    pub fn serve<S>(self, service: S)
+    pub async fn serve<S>(self, service: S)
     where
         S: NewService<Request = Request, Response = Response> + Send + Sync + 'static,
         S::Request: From<Request>,
@@ -46,11 +46,11 @@ impl Server {
         S::Error: Into<Error>,
         S::Instance: Send + Sync + 'static,
     {
-        self.serve_until(service, future::pending());
+        self.serve_until(service, future::pending()).await;
     }
 
     /// Start a Modbus TCP server that blocks the current thread.
-    pub fn serve_until<S, Sd>(self, service: S, shutdown_signal: Sd)
+    pub async fn serve_until<S, Sd>(self, service: S, shutdown_signal: Sd)
     where
         S: NewService<Request = Request, Response = Response> + Send + Sync + 'static,
         Sd: Future<Output = ()> + Sync + Send + Unpin + 'static,
@@ -68,24 +68,19 @@ impl Server {
             server.threads.unwrap_or(1),
             service,
             shutdown_signal,
-        );
+        ).await;
     }
 }
 
 /// Will start a TCP listener and will serve data with service provided
 /// until shutdown signal will be triggered in shutdown_signal future
-fn serve_until<S, Sd>(addr: SocketAddr, workers: usize, new_service: S, shutdown_signal: Sd)
+async fn serve_until<S, Sd>(addr: SocketAddr, workers: usize, new_service: S, shutdown_signal: Sd)
 where
     S: NewService<Request = Request, Response = Response> + Send + Sync + 'static,
     S::Error: Into<Error>,
     S::Instance: 'static + Send + Sync,
     Sd: Future<Output = ()> + Unpin + Send + Sync + 'static,
 {
-    let rt = tokio::runtime::Builder::new_multi_thread()
-        .enable_io()
-        .build()
-        .unwrap();
-
     let new_service = Arc::new(new_service);
 
     let server = async {
@@ -114,14 +109,10 @@ where
     let mut server = Box::pin(server.fuse());
     let mut shutdown_signal = shutdown_signal.fuse();
 
-    let task = async {
-        select! {
-            res = server => if let Err(e) = res { error!("error: {}", e) },
-            _ = shutdown_signal => trace!("Shutdown signal received")
-        }
-    };
-
-    rt.block_on(task);
+    select! {
+        res = server => if let Err(e) = res { error!("error: {}", e) },
+       _ = shutdown_signal => trace!("Shutdown signal received")
+    }
 }
 
 /// The request-response loop spawned by serve_until for each client
