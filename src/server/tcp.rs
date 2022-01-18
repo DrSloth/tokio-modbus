@@ -173,7 +173,7 @@ fn listener(addr: SocketAddr, workers: usize) -> io::Result<TcpListener> {
         SocketAddr::V4(_) => Socket::new(Domain::IPV4, Type::STREAM, None)?,
         SocketAddr::V6(_) => Socket::new(Domain::IPV6, Type::STREAM, None)?,
     };
-    configure_tcp(workers, &listener)?;
+    //configure_tcp(workers, &listener)?;
     listener.reuse_address()?;
     listener.bind(&addr.into())?;
     listener.listen(1024)?;
@@ -182,9 +182,9 @@ fn listener(addr: SocketAddr, workers: usize) -> io::Result<TcpListener> {
 
 #[cfg(unix)]
 fn configure_tcp(workers: usize, tcp: &Socket) -> io::Result<()> {
-    if workers > 1 {
+   /*  if workers > 1 {
         tcp.reuse_port()?;
-    }
+    } */
     Ok(())
 }
 
