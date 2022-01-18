@@ -89,13 +89,14 @@ where
         loop {
             let (stream, addr) = listener.accept().await?;
             log::debug!("Accepted incoming request from {:?}", addr);
-            
+
             let framed = Framed::new(stream, codec::tcp::ServerCodec::default());
 
             let new_service = new_service.clone();
             tokio::spawn(Box::pin(async move {
+                log::debug!("Spawning processing of request from {:?}", addr);
                 let service = new_service.new_service().unwrap();
-                let future = process(framed, service);
+                let future = process(addr, framed, service);
 
                 if let Err(err) = future.await {
                     eprintln!("{:?}", err);
@@ -119,6 +120,7 @@ where
 
 /// The request-response loop spawned by serve_until for each client
 async fn process<S>(
+    sock_addr: SocketAddr,
     framed: Framed<TcpStream, codec::tcp::ServerCodec>,
     service: S,
 ) -> io::Result<()>
@@ -130,18 +132,23 @@ where
 
     loop {
         let request = framed.next().await;
+        log::debug!("Received frame from {:?}", sock_addr);
 
         // tcp socket closed
         if request.is_none() {
+            log::debug!("Closed connection with {:?}", sock_addr);
             break;
         }
 
         let request = request.unwrap()?;
         let hdr = request.hdr;
+        log::debug!("Calling into service for {:?}", sock_addr);
         let response = service
             .call(request.hdr.unit_id.into(), request.pdu.0)
             .await
             .map_err(Into::into)?;
+        
+        log::debug!("Finished call into service for {:?}", sock_addr);
 
         framed
             .send(tcp::ResponseAdu {
@@ -149,6 +156,7 @@ where
                 pdu: response.into(),
             })
             .await?;
+        log::debug!("Send response frame to {:?}", sock_addr);
     }
     Ok(())
 }
