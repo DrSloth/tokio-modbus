@@ -116,6 +116,7 @@ where
 
     select! {
         res = server => {
+            log::debug!("Server shut down");
             if let Err(e) = res { 
                 log::error!("error: {}", e)
             }
