@@ -91,6 +91,7 @@ where
             log::debug!("Accepted incoming request from {:?}", addr);
 
             let framed = Framed::new(stream, codec::tcp::ServerCodec::default());
+            log::debug!("Framed stream for processing {:?}", addr);
 
             let new_service = new_service.clone();
             tokio::spawn(Box::pin(async move {
