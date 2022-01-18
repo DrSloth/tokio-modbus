@@ -87,7 +87,9 @@ where
         let listener = listener(addr, workers).unwrap();
 
         loop {
-            let (stream, _) = listener.accept().await?;
+            let (stream, addr) = listener.accept().await?;
+            log::debug!("Accepted incoming request from {:?}", addr);
+            
             let framed = Framed::new(stream, codec::tcp::ServerCodec::default());
 
             let new_service = new_service.clone();
