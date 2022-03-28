@@ -135,7 +135,7 @@ where
         framed
             .send(resp)
             .await?;
-        log::debug!("Send response frame to {:?}", sock_addr);
+        log::debug!("Finished sending response frame to {:?}", sock_addr);
     }
     Ok(())
 }
