@@ -71,9 +71,8 @@ impl Server {
 async fn process<S: Service>(
     mut framed: Framed<SerialStream, codec::rtu::ServerCodec>,
     service: S,
-) -> Result<(), Error>
-{
-    // NOTE this server is running on a single task as the RTU Bus is effectively one long lasting 
+) -> Result<(), Error> {
+    // NOTE this server is running on a single task as the RTU Bus is effectively one long lasting
     //  connection on which we don't really have to handle parallel requests.
     loop {
         let request = match framed.next().await {
@@ -90,12 +89,14 @@ async fn process<S: Service>(
 
         match response.into() {
             Response::Nop => continue,
-            response => framed
-            .send(rtu::ResponseAdu {
-                hdr,
-                pdu: response.into(),
-            })
-            .await?,
+            response => {
+                framed
+                    .send(rtu::ResponseAdu {
+                        hdr,
+                        pdu: response.into(),
+                    })
+                    .await?
+            }
         }
     }
     Ok(())

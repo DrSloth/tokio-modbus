@@ -121,7 +121,7 @@ where
             .call(request.hdr.unit_id.into(), request.pdu.0)
             .await
             .map_err(Into::into)?;
-        
+
         log::debug!("Finished call into service for {:?}", sock_addr);
 
         let resp = tcp::ResponseAdu {
@@ -131,9 +131,7 @@ where
 
         log::debug!("Sending Response: {:?} to {:?}", resp, sock_addr);
 
-        framed
-            .send(resp)
-            .await?;
+        framed.send(resp).await?;
         log::debug!("Finished sending response frame to {:?}", sock_addr);
     }
     Ok(())
@@ -157,7 +155,7 @@ fn listener(addr: SocketAddr, workers: usize) -> io::Result<TcpListener> {
 #[cfg(unix)]
 #[allow(unused)]
 fn configure_tcp(workers: usize, tcp: &Socket) -> io::Result<()> {
-   /*  if workers > 1 {
+    /*  if workers > 1 {
         tcp.reuse_port()?;
     } */
     Ok(())

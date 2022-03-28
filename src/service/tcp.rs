@@ -81,7 +81,13 @@ impl Context {
         let req_adu = self.next_request_adu(req, disconnect);
         let req_hdr = req_adu.hdr;
 
-        log::debug!("Call with adu {:?}", req_adu);
+        log::debug!(
+            "Call with adu {:?} to {:?}, write buffer contains {} bytes, read buffer contains {} bytes",
+            req_adu,
+            self.service.get_ref().peer_addr(),
+            self.service.write_buffer().len(),
+            self.service.read_buffer().len()
+        );
 
         self.service.send(req_adu).await?;
         let res_adu = self
@@ -89,6 +95,14 @@ impl Context {
             .next()
             .await
             .ok_or_else(Error::last_os_error)??;
+
+        log::debug!(
+            "Received adu {:?} from {:?}, write buffer contains {} bytes, read buffer contains {} bytes",
+            res_adu,
+            self.service.get_ref().peer_addr(),
+            self.service.write_buffer().len(),
+            self.service.read_buffer().len()
+        );
 
         match res_adu.pdu {
             ResponsePdu(Ok(res)) => verify_response_header(req_hdr, res_adu.hdr).and(Ok(res)),

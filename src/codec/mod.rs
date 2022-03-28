@@ -142,7 +142,7 @@ impl From<Response> for Bytes {
                     data.put_u8(d);
                 }
             }
-            Nop => unreachable!()
+            Nop => unreachable!(),
         }
         data.freeze()
     }

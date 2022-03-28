@@ -1,6 +1,6 @@
 use std::{future::Future, io, rc::Rc, sync::Arc};
 
-use crate::{slave::Slave, frame};
+use crate::{frame, slave::Slave};
 
 /// A Modbus server service.
 pub trait Service {
