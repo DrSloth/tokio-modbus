@@ -107,7 +107,7 @@ where
 {
     loop {
         let request = framed.next().await;
-        log::debug!("Received frame from {:?}", sock_addr);
+        log::debug!("Received request {:?} from {:?}", request, sock_addr);
 
         // tcp socket closed
         if request.is_none() {
@@ -130,7 +130,7 @@ where
             pdu: response.into(),
         };
 
-        log::debug!("{:?}", resp);
+        log::debug!("Sending Response: {:?} to {:?}", resp, sock_addr);
 
         framed
             .send(resp)
