@@ -5,7 +5,7 @@ use crate::{
     slave::*,
 };
 
-use futures_util::{future, sink::SinkExt, stream::StreamExt};
+use futures_util::{future, sink::SinkExt as _, stream::StreamExt as _};
 use std::{
     fmt::Debug,
     future::Future,
@@ -116,23 +116,27 @@ mod tests {
         impl AsyncRead for MockTransport {
             fn poll_read(
                 self: Pin<&mut Self>,
-                _: &mut Context,
-                _: &mut ReadBuf,
+                _: &mut Context<'_>,
+                _: &mut ReadBuf<'_>,
             ) -> Poll<Result<()>> {
                 Poll::Ready(Ok(()))
             }
         }
 
         impl AsyncWrite for MockTransport {
-            fn poll_write(self: Pin<&mut Self>, _: &mut Context, _: &[u8]) -> Poll<Result<usize>> {
+            fn poll_write(
+                self: Pin<&mut Self>,
+                _: &mut Context<'_>,
+                _: &[u8],
+            ) -> Poll<Result<usize>> {
                 Poll::Ready(Ok(2))
             }
 
-            fn poll_flush(self: Pin<&mut Self>, _: &mut Context) -> Poll<Result<()>> {
+            fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<()>> {
                 Poll::Ready(Ok(()))
             }
 
-            fn poll_shutdown(self: Pin<&mut Self>, _: &mut Context) -> Poll<Result<()>> {
+            fn poll_shutdown(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<()>> {
                 unimplemented!()
             }
         }

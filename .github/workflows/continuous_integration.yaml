@@ -37,20 +37,31 @@ jobs:
         with:
           profile: minimal
 
-      - name: Test workspace with all features enabled
+      - name: Generate Cargo.lock
+        uses: actions-rs/cargo@v1
+        with:
+          command: generate-lockfile
+
+      - name: Build tests with all features enabled
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --workspace --all-features
+          args: --workspace --locked --all-features --no-run
+
+      - name: Run tests with all features enabled
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --workspace --locked --all-features -- --nocapture --quiet
 
       - name: Build workspace documentation with all features enabled
         uses: actions-rs/cargo@v1
         with:
           command: doc
-          args: --workspace --all-features
+          args: --workspace --locked --all-features
 
-      - name: Build workspace in release mode with default features
+      - name: Build release with default features
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --workspace --release
+          args: --locked --profile release

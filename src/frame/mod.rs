@@ -156,6 +156,7 @@ pub enum Response {
 
 /// A server (slave) exception.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
 pub enum Exception {
     IllegalFunction = 0x01,
     IllegalDataAddress = 0x02,
@@ -166,6 +167,12 @@ pub enum Exception {
     MemoryParityError = 0x08,
     GatewayPathUnavailable = 0x0A,
     GatewayTargetDevice = 0x0B,
+}
+
+impl From<Exception> for u8 {
+    fn from(from: Exception) -> Self {
+        from as u8
+    }
 }
 
 impl Exception {
@@ -238,7 +245,7 @@ impl From<ResponsePdu> for Result<Response, ExceptionResponse> {
 }
 
 impl fmt::Display for Exception {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.description())
     }
 }
@@ -250,7 +257,7 @@ impl error::Error for Exception {
 }
 
 impl fmt::Display for ExceptionResponse {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Modbus function {}: {}", self.function, self.exception)
     }
 }

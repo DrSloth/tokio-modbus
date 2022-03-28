@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.5.2 (2021-12-05)
+
+- Fix (RTU): Wrong byte count offset when writing multiple coils/registers
+
+## v0.5.1 (2021-11-21)
+
+- Fix: require tokio/rt for sync feature
+- Changed: Update methods on TCP server to be async (only concerns `tcp-server-unstable` feature)
+
 ## v0.5.0 (2021-08-20)
 
 - Removed `sync` from default features
@@ -7,6 +16,10 @@
 - Removed client-side `SharedContext`
 - Upgraded [tokio](https://tokio.rs/) version from 0.2 to 1
 - Switched from deprecated [net2](https://github.com/deprecrated/net2-rs) to [socket2](https://github.com/rust-lang/socket2)
+
+## v0.4.2 (2021-12-05)
+
+- Fix (RTU): Wrong byte count offset when writing multiple coils/registers
 
 ## v0.4.1 (2021-08-13)
 
@@ -36,7 +49,7 @@ Here are some lines as example:
 -let task = tcp::connect(&handle, socket_addr).and_then(move |ctx|
 -    ctx.read_input_registers(0x1000, 7).and_then(move |data|
 -        // ...
--  	 )
+-    )
 -);
 +let mut ctx = tcp::connect(socket_addr).await?;
 +let data = ctx.read_input_registers(0x1000, 7).await?;
@@ -106,7 +119,7 @@ and servers!
   +  client::sync::Client
   ```
 
-- Rename and relocate _Client_ structs into _Context_
+- Rename and relocate *Client* structs into *Context*
 
   ```diff
   -  client::Client
@@ -176,14 +189,17 @@ and servers!
 ### Breaking Changes
 
 - Changed Client API
+
   ```diff
   -  use tokio_modbus::{Client, TcpClient};
   +  use tokio_modbus::*;
   ```
+
   ```diff
   -  RtuClient::connect(port, server_addr, &handle)
   +  Client::connect_rtu(port, server_addr, &handle)
   ```
+
   ```diff
   -  TcpClient::connect(&addr, &handle)
   +  Client::connect_tcp(&addr, &handle)

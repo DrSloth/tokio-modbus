@@ -1,16 +1,18 @@
-/*!
- * Modbus RTU server functionality
- */
+//! Modbus RTU server skeleton
 
+use crate::{
+    codec,
+    frame::*,
+    server::service::{NewService, Service},
+    slave::Slave,
+};
+use futures::{select, Future, FutureExt as _};
+use futures_util::{SinkExt as _, StreamExt as _};
 use std::{io::Error, path::Path};
-use futures::{select, Future, FutureExt};
-
-use futures_util::{SinkExt, StreamExt};
 use tokio_serial::SerialStream;
 use tokio_util::codec::Framed;
 
-use crate::{codec, frame::*, prelude::Slave, server::service::{NewService, Service}};
-
+#[derive(Debug)]
 pub struct Server {
     serial: SerialStream,
 }

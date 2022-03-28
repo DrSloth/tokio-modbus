@@ -1,44 +1,44 @@
 [package]
 name = "tokio-modbus"
 description = "Tokio-based Modbus library"
-version = "0.5.0"
+version = "0.5.2"
 authors = ["slowtec GmbH", "Markus Kohlhase <markus.kohlhase@slowtec.de>"]
 license = "MIT/Apache-2.0"
 readme = "README.md"
 keywords = ["fieldbus", "modbus", "hardware", "automation"]
 homepage = "https://github.com/slowtec/tokio-modbus"
 repository = "https://github.com/slowtec/tokio-modbus"
-edition = "2018"
+edition = "2021"
 
 [package.metadata.docs.rs]
 all-features = true
 
 [dependencies]
-async-trait = "0.1"
-byteorder = "1"
-bytes = "1"
-futures = { version = "0.3", optional = true }
-futures-util = { version = "0.3", optional = true, default-features = false }
-log = "0.4"
-smallvec = { version = "1", default-features = false }
-socket2 = { version = "0.4", optional = true, default-features = false }
-tokio = { version = "1", default-features = false }
+async-trait = "0.1.52"
+byteorder = "1.4.3"
+bytes = "1.1.0"
+futures = { version = "0.3.21", optional = true }
+futures-util = { version = "0.3.21", optional = true, default-features = false }
+log = "0.4.14"
+smallvec = { version = "1.8.0", default-features = false }
+socket2 = { version = "0.4.4", optional = true, default-features = false }
+tokio = { version = "1.17.0", default-features = false }
 # Disable default-features to exclude unused dependency on libudev
-tokio-serial = { version = "5.4", optional = true, default-features = false }
-tokio-util = { version = "0.6", features = ["codec"] }
+tokio-serial = { version = "5.4.1", optional = true, default-features = false }
+tokio-util = { version = "0.7.0", features = ["codec"] }
 
 [dev-dependencies]
-env_logger = "0.9"
-futures = "0.3"
-tokio = { version = "^1.15", features = ["net", "macros", "io-util", "rt"] }
+env_logger = "0.9.0"
+futures = "0.3.21"
+tokio = { version = "1.17.0", features = ["net", "macros", "io-util", "rt", "time"] }
 
 [features]
 default = ["tcp", "rtu", "server"]
 rtu = ["tokio-serial", "futures-util/sink"]
 tcp = ["tokio/net", "futures-util/sink"]
-sync = []
-server = ["futures", "socket2/all", "tokio/rt", "tokio/rt-multi-thread"]
-tcp-server-unstable = ["server"]
+sync = ["tokio/rt"]
+server = ["futures", "socket2/all", "tokio/macros", "tokio/rt", "tokio/rt-multi-thread"]
+tcp-server-unstable = ["tcp", "server"]
 
 [badges]
 maintenance = { status = "actively-developed" }

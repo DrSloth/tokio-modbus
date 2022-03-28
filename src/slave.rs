@@ -1,5 +1,8 @@
+//! Modbus devices
+
 use std::{fmt, num::ParseIntError, str::FromStr};
 
+/// Slave identifier
 pub type SlaveId = u8;
 
 /// A single byte for addressing Modbus slave devices.
@@ -39,14 +42,17 @@ impl Slave {
         Slave(255)
     }
 
+    /// Check if the [`SlaveId`] is used for broadcasting
     pub fn is_broadcast(self) -> bool {
         self == Self::broadcast()
     }
 
+    /// Check if the [`SlaveId`] addresses a single device
     pub fn is_single_device(self) -> bool {
         self >= Self::min_device() && self <= Self::max_device()
     }
 
+    /// Check if the [`SlaveId`] is reserved
     pub fn is_reserved(self) -> bool {
         self > Self::max_device()
     }
@@ -99,7 +105,7 @@ impl FromStr for Slave {
 }
 
 impl fmt::Display for Slave {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} (0x{:0>2X})", self.0, self.0)
     }
 }

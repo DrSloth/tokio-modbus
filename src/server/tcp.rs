@@ -1,11 +1,13 @@
+//! Modbus TCP server skeleton
+
 use crate::{
     codec,
     frame::*,
     server::service::{NewService, Service},
 };
 
-use futures::{self, future, select, Future};
-use futures_util::{future::FutureExt, sink::SinkExt, stream::StreamExt};
+use futures::{self, Future};
+use futures_util::{future::FutureExt as _, sink::SinkExt as _, stream::StreamExt as _};
 use log::{error, trace};
 use socket2::{Domain, Socket, Type};
 use std::{
@@ -19,26 +21,16 @@ use tokio_util::codec::Framed;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Server {
     socket_addr: SocketAddr,
-    threads: Option<usize>,
 }
 
 impl Server {
     /// Set the address for the server (mandatory).
     pub fn new(socket_addr: SocketAddr) -> Self {
-        Self {
-            socket_addr,
-            threads: None,
-        }
+        Self { socket_addr }
     }
 
-    /// Set the number of threads running simultaneous event loops (optional, Unix only).
-    pub fn threads(mut self, threads: usize) -> Self {
-        self.threads = Some(threads);
-        self
-    }
-
-    /// Start a Modbus TCP server that blocks the current thread.
-    pub async fn serve<S>(self, service: S)
+    /// Start an async Modbus TCP server task.
+    pub async fn serve<S>(&self, service: S) -> Result<(), std::io::Error>
     where
         S: NewService<Request = Request, Response = Response> + Send + Sync + 'static,
         S::Request: From<Request>,
@@ -46,11 +38,28 @@ impl Server {
         S::Error: Into<Error>,
         S::Instance: Send + Sync + 'static,
     {
-        self.serve_until(service, future::pending()).await;
+        let service = Arc::new(service);
+        let listener = TcpListener::bind(self.socket_addr).await?;
+
+        loop {
+            log::debug!("Listening for requests");
+            let (stream, addr) = listener.accept().await?;
+            log::debug!("Accepted incoming request from {:?}", addr);
+
+            let framed = Framed::new(stream, codec::tcp::ServerCodec::default());
+            let new_service = service.clone();
+
+            tokio::spawn(Box::pin(async move {
+                let service = new_service.new_service().unwrap();
+                if let Err(err) = process(framed, service).await {
+                    eprintln!("{:?}", err);
+                }
+            //}));
+        }
     }
 
-    /// Start a Modbus TCP server that blocks the current thread.
-    pub async fn serve_until<S, Sd>(self, service: S, shutdown_signal: Sd)
+    /// Start a Modbus TCP server that blocks the current thread until a shutdown is requested
+    pub fn serve_until<S, Sd>(self, service: S, shutdown_signal: Sd)
     where
         S: NewService<Request = Request, Response = Response> + Send + Sync + 'static,
         Sd: Future<Output = ()> + Sync + Send + Unpin + 'static,
@@ -59,69 +68,29 @@ impl Server {
         S::Error: Into<Error>,
         S::Instance: Send + Sync + 'static,
     {
-        let mut server = Server::new(self.socket_addr);
-        if let Some(threads) = self.threads {
-            server = server.threads(threads);
-        }
-        serve_until(
-            server.socket_addr,
-            server.threads.unwrap_or(1),
-            service,
-            shutdown_signal,
-        ).await;
-    }
-}
+        let shutdown_signal = shutdown_signal.fuse();
+        let rt = tokio::runtime::Builder::new_multi_thread()
+            .enable_io()
+            .build()
+            .unwrap();
 
-/// Will start a TCP listener and will serve data with service provided
-/// until shutdown signal will be triggered in shutdown_signal future
-async fn serve_until<S, Sd>(addr: SocketAddr, workers: usize, new_service: S, shutdown_signal: Sd)
-where
-    S: NewService<Request = Request, Response = Response> + Send + Sync + 'static,
-    S::Error: Into<Error>,
-    S::Instance: 'static + Send + Sync,
-    Sd: Future<Output = ()> + Unpin + Send + Sync + 'static,
-{
-    let new_service = Arc::new(new_service);
-
-    let server = async {
-        let listener = listener(addr, workers).unwrap();
-
-        loop {
-            log::debug!("Listening for requests");
-            let (stream, addr) = listener.accept().await?;
-            log::debug!("Accepted incoming request from {:?}", addr);
-
-            let framed = Framed::new(stream, codec::tcp::ServerCodec::default());
-            log::debug!("Framed stream for processing {:?}", addr);
-
-            let new_service = new_service.clone();
-            //tokio::spawn(Box::pin(async move {
-                log::debug!("Spawning processing of request from {:?}", addr);
-                let service = new_service.new_service().unwrap();
-                let future = process(addr, framed, service);
-
-                if let Err(err) = future.await {
-                    log::error!("{:?}", err);
-                }
-            //}));
-        }
-
-        // the only way found to specify the "task" future error type
-        #[allow(unreachable_code)]
-        io::Result::<()>::Ok(())
-    };
-
-    let mut server = Box::pin(server.fuse());
-    let mut shutdown_signal = shutdown_signal.fuse();
-
-    select! {
-        res = server => {
-            log::debug!("Server shut down");
-            if let Err(e) = res { 
-                log::error!("error: {}", e)
+        rt.block_on(async {
+            tokio::select! {
+                res = self.serve(service) => if let Err(e) = res { error!("error: {}", e) },
+                _ = shutdown_signal => trace!("Shutdown signal received")
             }
-        } ,
-       _ = shutdown_signal => trace!("Shutdown signal received")
+        })
+    }
+
+    pub fn serve_forever<S>(self, service: S)
+    where
+        S: NewService<Request = Request, Response = Response> + Send + Sync + 'static,
+        S::Request: From<Request>,
+        S::Response: Into<Response>,
+        S::Error: Into<Error>,
+        S::Instance: Send + Sync + 'static,
+    {
+        self.serve_until(service, futures::future::pending())
     }
 }
 
@@ -169,6 +138,7 @@ where
 }
 
 /// Start TCP listener - configure and open TCP socket
+#[allow(unused)]
 fn listener(addr: SocketAddr, workers: usize) -> io::Result<TcpListener> {
     let listener = match addr {
         SocketAddr::V4(_) => Socket::new(Domain::IPV4, Type::STREAM, None)?,
@@ -183,6 +153,7 @@ fn listener(addr: SocketAddr, workers: usize) -> io::Result<TcpListener> {
 }
 
 #[cfg(unix)]
+#[allow(unused)]
 fn configure_tcp(workers: usize, tcp: &Socket) -> io::Result<()> {
    /*  if workers > 1 {
         tcp.reuse_port()?;
@@ -191,6 +162,7 @@ fn configure_tcp(workers: usize, tcp: &Socket) -> io::Result<()> {
 }
 
 #[cfg(windows)]
+#[allow(unused)]
 fn configure_tcp(_workers: usize, _tcp: &Socket) -> io::Result<()> {
     Ok(())
 }
