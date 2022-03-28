@@ -82,31 +82,32 @@ impl Context {
         let req_hdr = req_adu.hdr;
 
         log::debug!(
-            "Call with adu {:?} to {:?}, write buffer contains {} bytes, read buffer contains {} bytes",
+            "Call with adu {:?} from {:?}",
             req_adu,
             self.service.get_ref().peer_addr(),
-            self.service.write_buffer().len(),
-            self.service.read_buffer().len()
         );
 
         self.service.send(req_adu).await?;
-        let res_adu = self
-            .service
-            .next()
-            .await
-            .ok_or_else(Error::last_os_error)??;
 
-        log::debug!(
-            "Received adu {:?} from {:?}, write buffer contains {} bytes, read buffer contains {} bytes",
-            res_adu,
-            self.service.get_ref().peer_addr(),
-            self.service.write_buffer().len(),
-            self.service.read_buffer().len()
-        );
+        loop {
+            let res_adu = self
+                .service
+                .next()
+                .await
+                .ok_or_else(Error::last_os_error)??;
 
-        match res_adu.pdu {
-            ResponsePdu(Ok(res)) => verify_response_header(req_hdr, res_adu.hdr).and(Ok(res)),
-            ResponsePdu(Err(err)) => Err(Error::new(ErrorKind::Other, err)),
+            log::debug!(
+                "Received adu {:?} from {:?}",
+                res_adu,
+                self.service.get_ref().peer_addr(),
+            );
+
+            if verify_response_header(req_hdr, res_adu.hdr).is_ok() {
+                return match res_adu.pdu {
+                    ResponsePdu(Ok(res)) => Ok(res),
+                    ResponsePdu(Err(err)) => Err(Error::new(ErrorKind::Other, err)),
+                };
+            }
         }
     }
 }
