@@ -125,11 +125,15 @@ where
         
         log::debug!("Finished call into service for {:?}", sock_addr);
 
+        let resp = tcp::ResponseAdu {
+            hdr,
+            pdu: response.into(),
+        };
+
+        log::debug!("{:?}", resp);
+
         framed
-            .send(tcp::ResponseAdu {
-                hdr,
-                pdu: response.into(),
-            })
+            .send(resp)
             .await?;
         log::debug!("Send response frame to {:?}", sock_addr);
     }
