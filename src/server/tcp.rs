@@ -39,7 +39,8 @@ impl Server {
         S::Instance: Send + Sync + 'static,
     {
         let service = Arc::new(service);
-        let listener = TcpListener::bind(self.socket_addr).await?;
+        let sock_addr = self.socket_addr;
+        let listener = TcpListener::bind(sock_addr).await?;
 
         loop {
             log::debug!("Listening for requests");
@@ -51,10 +52,10 @@ impl Server {
 
             tokio::spawn(Box::pin(async move {
                 let service = new_service.new_service().unwrap();
-                if let Err(err) = process(framed, service).await {
-                    eprintln!("{:?}", err);
+                if let Err(err) = process(sock_addr, framed, service).await {
+                    log::error!("{:?}", err);
                 }
-            //}));
+            }));
         }
     }
 
@@ -97,15 +98,13 @@ impl Server {
 /// The request-response loop spawned by serve_until for each client
 async fn process<S>(
     sock_addr: SocketAddr,
-    framed: Framed<TcpStream, codec::tcp::ServerCodec>,
+    mut framed: Framed<TcpStream, codec::tcp::ServerCodec>,
     service: S,
 ) -> io::Result<()>
 where
     S: Service<Request = Request, Response = Response> + Send + Sync + 'static,
     S::Error: Into<Error>,
 {
-    let mut framed = framed;
-
     loop {
         let request = framed.next().await;
         log::debug!("Received frame from {:?}", sock_addr);
