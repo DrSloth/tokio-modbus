@@ -14,7 +14,7 @@ use std::{
 };
 use tokio::net::TcpStream;
 use tokio_util::codec::Framed;
-use socket2::{Socket, Domain, Type};
+use socket2::Socket;
 
 pub(crate) fn connect_slave(
     socket_addr: SocketAddr,
@@ -22,14 +22,10 @@ pub(crate) fn connect_slave(
 ) -> impl Future<Output = Result<Context, Error>> + 'static {
     let unit_id: UnitId = slave.into();
     async move {
-        let stream = match socket_addr {
-            SocketAddr::V4(_) => Socket::new(Domain::IPV4, Type::STREAM, None)?,
-            SocketAddr::V6(_) => Socket::new(Domain::IPV6, Type::STREAM, None)?,
-        };
-        stream.set_send_buffer_size(0)?;
-        stream.set_nonblocking(true)?;
-        stream.connect(&socket_addr.into())?;
-        let service = TcpStream::from_std(stream.into())?;
+        let service = TcpStream::connect(socket_addr).await?;
+        let socket = Socket::from(service.into_std()?);
+        socket.set_send_buffer_size(0)?;
+        let service = TcpStream::from_std(socket.into())?;
         let framed = Framed::new(service, codec::tcp::ClientCodec::default());
 
         let context: Context = Context::new(framed, unit_id);
