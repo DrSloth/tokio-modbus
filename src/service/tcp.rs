@@ -23,9 +23,6 @@ pub(crate) fn connect_slave(
     let unit_id: UnitId = slave.into();
     async move {
         let service = TcpStream::connect(socket_addr).await?;
-        let socket = Socket::from(service.into_std()?);
-        socket.set_send_buffer_size(0)?;
-        let service = TcpStream::from_std(socket.into())?;
         let framed = Framed::new(service, codec::tcp::ClientCodec::default());
 
         let context: Context = Context::new(framed, unit_id);
