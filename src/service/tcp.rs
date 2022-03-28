@@ -81,6 +81,8 @@ impl Context {
         let req_adu = self.next_request_adu(req, disconnect);
         let req_hdr = req_adu.hdr;
 
+        log::debug!("Call with adu {:?}", req_adu);
+
         self.service.send(req_adu).await?;
         let res_adu = self
             .service

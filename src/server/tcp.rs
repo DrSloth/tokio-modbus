@@ -39,13 +39,12 @@ impl Server {
         S::Instance: Send + Sync + 'static,
     {
         let service = Arc::new(service);
-        let sock_addr = self.socket_addr;
-        let listener = TcpListener::bind(sock_addr).await?;
+        let listener = TcpListener::bind(self.socket_addr).await?;
 
         loop {
             log::debug!("Listening for requests");
-            let (stream, addr) = listener.accept().await?;
-            log::debug!("Accepted incoming request from {:?}", addr);
+            let (stream, sock_addr) = listener.accept().await?;
+            log::debug!("Accepted incoming request from {:?}", sock_addr);
 
             let framed = Framed::new(stream, codec::tcp::ServerCodec::default());
             let new_service = service.clone();
