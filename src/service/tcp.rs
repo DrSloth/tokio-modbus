@@ -28,7 +28,7 @@ pub(crate) fn connect_slave(
         };
         stream.set_send_buffer_size(0)?;
         stream.set_nonblocking(true)?;
-        stream.bind(&socket_addr.into())?;
+        stream.connect(&socket_addr.into())?;
         let service = TcpStream::from_std(stream.into())?;
         let framed = Framed::new(service, codec::tcp::ClientCodec::default());
 
